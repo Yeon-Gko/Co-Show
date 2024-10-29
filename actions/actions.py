@@ -393,7 +393,7 @@ class OrderMapper:
             if self.entities[i]['entity'] == 'drink_type':
                 break
         return None
-    
+    #(제작중!)
     def _find_next_temperature_entitiy(self, current_index):
         for i in range(current_index + 1, len(self.entities)):
             if self.entities[i]['entity'] == 'temperature':
@@ -669,8 +669,7 @@ class ActionOrderConfirmation(Action):
                     return temperatures, drink_types, sizes, quantities, additional_options
 
             '''
-            if mapper._count_drink_types == 1 and mapper._count_temperature_entities > 1:
-                for 
+            #if mapper._count_drink_types == 1 and mapper._count_temperature_entities > 1:
             temperatures, drink_types, sizes, quantities, additional_options = mapper.get_mapped_data()
 
             logging.warning(f"주문 엔티티: {entities}")
