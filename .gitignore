@@ -1,0 +1,17 @@
+# Ignore everything
+*
+
+# Don't ignore .gitignore
+!.gitignore
+
+# Don't ignore actions directory and its contents
+!actions/
+!actions/**
+
+# Ignore pycache in actions
+actions/__pycache__/
+actions/**/__pycache__/
+
+# Don't ignore specific action files you want to track
+# !actions/kiosk/*.py
+# !actions/*.py
