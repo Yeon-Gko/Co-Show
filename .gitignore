@@ -1,14 +1,56 @@
-# Don't ignore .gitignore
+# Don't ignore .gitignore itself so we can track changes to it
 !.gitignore
 
-# Don't ignore actions directory and its contents
+# Don't ignore the actions directory and all its contents
 !actions/
 !actions/**
 
-# Ignore pycache in actions
+# Track .gitmessage.txt for consistent commit messages
+!.gitmessage.txt
+
+# Ignore __pycache__ only in the actions directory and its subdirectories
 actions/__pycache__/
 actions/**/__pycache__/
 
+# Ignore the Rasa cache directory
+.rasa/
+
+# Ignore version-specific directories
+=0.1.6
+=1.26.136
+=65.5.1
+
+# Ignore KoBERT directory, which includes models and scripts
+KoBERT/
+
+# Ignore all __pycache__ directories in the project
+__pycache__/
+
+# Ignore main Rasa configuration files
+config.yml
+credentials.yml
+domain.yml
+endpoints.yml
+
+# Ignore graph visualization files
+graph.html
+
+# Ignore models directory, which contains trained model files
+models/
+
+# Ignore results directory, which contains analysis outputs
+results/
+
+# Ignore TensorBoard logs generated during training
+tensorboard_logs/
+
+# Ignore tests directory for test data and scripts
+tests/
+
+# Ignore train_test_split directory for data splitting purposes
+train_test_split/
+
+# Ignore specific data files in the data directory related to NLU and story configurations
 data/nlu.yml
 data/rules.yml
 data/stories.yml

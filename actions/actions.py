@@ -660,8 +660,14 @@ class ActionOrderConfirmation(Action):
                     return temperatures, drink_types, sizes, quantities, additional_options
 
             '''
+            
             temperatures, drink_types, sizes, quantities, additional_options = mapper.get_mapped_data()
-
+            #(수정 변수)
+            temcount = mapper._count_temperature_entities()
+            drinkcount = mapper._count_drink_types()
+            
+            logging.warning(temcount)
+            logging.warning(drinkcount)
             logging.warning(f"주문 엔티티: {entities}")
             logging.warning(f"온도, 커피, 사이즈, 잔 수, 옵션: {temperatures} {drink_types} {sizes} {quantities} {additional_options}")
 
@@ -678,10 +684,10 @@ class ActionOrderConfirmation(Action):
             
             raise_missing_attribute_error(mapper.drinks)  # 음료 속성 검증
             if drink_types and quantities:
-                if mapper._count_drink_types == 1 and mapper._count_temperature_entities > 1:
+                if drinkcount == 1 and temcount > 1:
                     #(수정중!)
-                    for i in range(len(drink_types)):
-                        for j in range(mapper._count_temperature_entities):
+                    for i in range(drinkcount):
+                        for j in range(temcount):
                             order_manager.add_order(drink_types[i], quantities[i], temperatures[j], sizes[i], additional_options[i])
                 else :
                     for i in range(len(drink_types)):
