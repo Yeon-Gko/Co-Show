@@ -1,7 +1,10 @@
-git branch
+커밋하기 전에 꼭 사용하는것을 추천
+```
+git config commit.template .gitmessage.txt
+```
 
 #### 현제 브랜치 위치 정보 확인 
-```javascript
+```
 git branch
 ```
 ![스크린샷 2024-10-30 오전 12 11 03](https://github.com/user-attachments/assets/7d3aabcf-f73b-4aa2-a3f1-03b45c96e71e)
