@@ -301,9 +301,8 @@ class OrderMapper:
     def _map_entities(self):
         self.clean_entity_values()  # 엔티티 값 정리
         current_order = self._initialize_order()  # 현재 처리 중인 주문 초기화
-        drink_type_count_temp = self._count_drink_types()  # 음료 타입 엔티티 개수 확인(온도용)
+        #drink_type_count_temp = self._count_drink_types()  # 음료 타입 엔티티 개수 확인(온도용)
         # drink_type_count_size = self._count_drink_types()  # 음료 타입 엔티티 개수 확인(사이즈용)
-        logging.warning(drink_type_count_temp)
         temperature_entities_count = self._count_temperature_entities()  # 온도 엔티티 개수 확인
         apply_default_temperature = self.is_temperature_change and temperature_entities_count == 1 # 온도 변경 기능 중 음료의 사이즈가 지정이 안되었을 때 기본 값 적용 플래그
         size_entities_count = self._count_size_entities()  # 사이즈 엔티티 개수 확인
@@ -393,15 +392,7 @@ class OrderMapper:
             if self.entities[i]['entity'] == 'drink_type':
                 break
         return None
-    #(제작중!)
-    def _find_next_temperature_entitiy(self, current_index):
-        for i in range(current_index + 1, len(self.entities)):
-            if self.entities[i]['entity'] == 'temperature':
-                if i + 1 < len(self.entities) and self.entities[i + 1]['entity'] == 'temperature':
-                    return None
-                return self._map_temperature(self.entities[i]['value'])
-        return None
-
+   
     # 온도 매핑 알고리즘 메서드
     def _find_previous_or_next_temperature_entity(self, current_index):
         # drink_type의 바로 앞의 엔티티가 temperature인 경우
@@ -669,7 +660,6 @@ class ActionOrderConfirmation(Action):
                     return temperatures, drink_types, sizes, quantities, additional_options
 
             '''
-            #if mapper._count_drink_types == 1 and mapper._count_temperature_entities > 1:
             temperatures, drink_types, sizes, quantities, additional_options = mapper.get_mapped_data()
 
             logging.warning(f"주문 엔티티: {entities}")
@@ -685,12 +675,17 @@ class ActionOrderConfirmation(Action):
                     raise ValueError(f"{drink_types[i]}는(은) 온도를 변경하실 수 없습니다.")
                 if drink_types[i] in ice_only_drinks and temperatures[i] != "아이스":
                     raise ValueError(f"{drink_types[i]}는(은) 온도를 변경하실 수 없습니다.")
-
+            
             raise_missing_attribute_error(mapper.drinks)  # 음료 속성 검증
             if drink_types and quantities:
-                for i in range(len(drink_types)):
-                    order_manager.add_order(drink_types[i], quantities[i], temperatures[i], sizes[i], additional_options[i])
-            
+                if mapper._count_drink_types == 1 and mapper._count_temperature_entities > 1:
+                    #(수정중!)
+                    for i in range(len(drink_types)):
+                        for j in range(mapper._count_temperature_entities):
+                            order_manager.add_order(drink_types[i], quantities[i], temperatures[j], sizes[i], additional_options[i])
+                else :
+                    for i in range(len(drink_types)):
+                        order_manager.add_order(drink_types[i], quantities[i], temperatures[i], sizes[i], additional_options[i])
             # 메세지 생성
             confirmation_message = f"주문하신 음료는 {order_manager.get_order_summary()}입니다. 다른 추가 옵션이 필요하신가요?"
             # 출력
