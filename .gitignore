@@ -1,56 +1,56 @@
-# Don't ignore .gitignore itself so we can track changes to it
+# .gitignore 파일 자체를 추적하여 변경사항을 관리합니다
 !.gitignore
 
-# Don't ignore the actions directory and all its contents
+# actions 디렉토리와 그 안의 모든 내용을 Git에 포함시킵니다
 !actions/
 !actions/**
 
-# Track .gitmessage.txt for consistent commit messages
+# 일관된 커밋 메시지를 위해 .gitmessage.txt 파일을 추적합니다
 !.gitmessage.txt
 
-# Ignore __pycache__ only in the actions directory and its subdirectories
+# actions 디렉토리와 하위 디렉토리의 __pycache__ 폴더는 제외합니다
 actions/__pycache__/
 actions/**/__pycache__/
 
-# Ignore the Rasa cache directory
+# Rasa 캐시 디렉토리 제외
 .rasa/
 
-# Ignore version-specific directories
+# 버전별 디렉토리 제외
 =0.1.6
 =1.26.136
 =65.5.1
 
-# Ignore KoBERT directory, which includes models and scripts
+# 모델과 스크립트가 포함된 KoBERT 디렉토리 제외
 KoBERT/
 
-# Ignore all __pycache__ directories in the project
+# 프로젝트의 모든 __pycache__ 디렉토리 제외
 __pycache__/
 
-# Ignore main Rasa configuration files
+# Rasa 메인 설정 파일들 제외
 config.yml
 credentials.yml
 domain.yml
 endpoints.yml
 
-# Ignore graph visualization files
+# 그래프 시각화 파일 제외
 graph.html
 
-# Ignore models directory, which contains trained model files
+# 학습된 모델 파일이 포함된 models 디렉토리 제외
 models/
 
-# Ignore results directory, which contains analysis outputs
+# 분석 결과가 포함된 results 디렉토리 제외
 results/
 
-# Ignore TensorBoard logs generated during training
+# 학습 중 생성된 TensorBoard 로그 제외
 tensorboard_logs/
 
-# Ignore tests directory for test data and scripts
+# 테스트 데이터와 스크립트를 위한 tests 디렉토리 제외
 tests/
 
-# Ignore train_test_split directory for data splitting purposes
+# 데이터 분할을 위한 train_test_split 디렉토리 제외
 train_test_split/
 
-# Ignore specific data files in the data directory related to NLU and story configurations
+# NLU와 스토리 설정 관련 data 디렉토리의 특정 파일들 제외
 data/nlu.yml
 data/rules.yml
 data/stories.yml

@@ -274,6 +274,7 @@ class OrderMapper:
         self.drinks = []
         self.suffixes = ("사이즈로", "사이즈", "으로", "으", "걸로", "로", "는", "은", "해주세요", "해서", "해", "한거", "이랑", "도")
         self._map_entities()
+        
 
     # 주문 초기화 메서드
     def _initialize_order(self):
@@ -392,6 +393,13 @@ class OrderMapper:
             if self.entities[i]['entity'] == 'drink_type':
                 break
         return None
+     #(매핑 수정)
+    def _find_next_drink_entity(self, current_index):
+        for i in range(current_index + 1, len(self.entities)):
+            if self.entities[i]['entity'] == 'drink_type':
+                return True
+            else:
+                return False
    
     # 온도 매핑 알고리즘 메서드
     def _find_previous_or_next_temperature_entity(self, current_index):
@@ -643,10 +651,9 @@ class ActionOrderConfirmation(Action):
             # 최근 사용자 메시지에서 엔터티를 가져오기
             entities = [entity for entity in tracker.latest_message.get("entities", []) if entity.get("extractor") != "DIETClassifier"]
             user_text = tracker.latest_message.get("text", "")
-
+            
             if "사이즈 업" in user_text:
                 raise KeyError("size up")
-
             # 엔티티를 위치 순서로 정렬
             mapper = OrderMapper(entities)
             # mapper.get_mapped_data()를 이용해 temperatures, drink_types, sizes, quantities, additional_options 값 받아오기
@@ -658,16 +665,11 @@ class ActionOrderConfirmation(Action):
                     quantities = [drink["quantity"] for drink in self.drinks]
                     additional_options = [", ".join(drink["additional_options"]) for drink in self.drinks]
                     return temperatures, drink_types, sizes, quantities, additional_options
-
             '''
             
             temperatures, drink_types, sizes, quantities, additional_options = mapper.get_mapped_data()
+                
             #(수정 변수)
-            temcount = mapper._count_temperature_entities()
-            drinkcount = mapper._count_drink_types()
-            
-            logging.warning(temcount)
-            logging.warning(drinkcount)
             logging.warning(f"주문 엔티티: {entities}")
             logging.warning(f"온도, 커피, 사이즈, 잔 수, 옵션: {temperatures} {drink_types} {sizes} {quantities} {additional_options}")
 
@@ -683,15 +685,22 @@ class ActionOrderConfirmation(Action):
                     raise ValueError(f"{drink_types[i]}는(은) 온도를 변경하실 수 없습니다.")
             
             raise_missing_attribute_error(mapper.drinks)  # 음료 속성 검증
+            
+            #(수정한 곳)
             if drink_types and quantities:
-                if drinkcount == 1 and temcount > 1:
-                    #(수정중!)
-                    for i in range(drinkcount):
-                        for j in range(temcount):
-                            order_manager.add_order(drink_types[i], quantities[i], temperatures[j], sizes[i], additional_options[i])
-                else :
                     for i in range(len(drink_types)):
                         order_manager.add_order(drink_types[i], quantities[i], temperatures[i], sizes[i], additional_options[i])
+                        if mapper._find_next_drink_entity(i - 1):
+                            continue
+                        else:
+                            if mapper._count_temperature_entities() != mapper._count_drink_types(): #주문한 음료가 한개이며, 온도가 여러개일 경우 
+                                if "핫" in temperatures[i]: #온도는 '핫', '아이스'로 나뉘기 때문에 핫일 경우 아이스로 된 주문을 하나 더 추가
+                                    temperatures = "아이스"
+                                    order_manager.add_order(drink_types[i], quantities[i], temperatures, sizes[i], additional_options[i])
+                                else : #반대로 아닐 경우 '핫'으로 된 주문 하나 더 추가
+                                    temperatures = "핫"
+                                    order_manager.add_order(drink_types[i], quantities[i], temperatures, sizes[i], additional_options[i])
+                            
             # 메세지 생성
             confirmation_message = f"주문하신 음료는 {order_manager.get_order_summary()}입니다. 다른 추가 옵션이 필요하신가요?"
             # 출력
