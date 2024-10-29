@@ -13,3 +13,10 @@ git fetch --all
 ```
 git checkout [브랜치명] 
 ```
+
+### main 브랜치 최신 버전 가져오기 
+- 최신 main 브랜치는 커밋하고 새로운 브랜치 만들면 부족건 pull 받기
+```
+git pull origin main
+```
+
