@@ -7,11 +7,6 @@ git branch
 ![스크린샷 2024-10-30 오전 12 11 03](https://github.com/user-attachments/assets/7d3aabcf-f73b-4aa2-a3f1-03b45c96e71e)
 - 현제 위치 정보를 확인할수있다.
 
-#### 모든 브랜치 정보 업데이트하기
-```
-git fetch --all
-```
-
 #### 원하는 브랜치로 전환 
 ```
 git checkout [브랜치명] 
