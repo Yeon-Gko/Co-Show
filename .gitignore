@@ -54,3 +54,5 @@ train_test_split/
 data/nlu.yml
 data/rules.yml
 data/stories.yml
+
+/meta copy/
