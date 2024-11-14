@@ -56,3 +56,12 @@ data/rules.yml
 data/stories.yml
 
 /meta copy/
+
+# Ignore unnecessary files and directories
+.ipynb_checkpoints/
+.rasa copy/
+Untitled.ipynb
+Untitled1.ipynb
+__pycache__ copy/
+meta/
+test.py
