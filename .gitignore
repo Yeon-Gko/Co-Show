@@ -51,9 +51,9 @@ tests/
 train_test_split/
 
 # NLU와 스토리 설정 관련 data 디렉토리의 특정 파일들 제외
-data/nlu.yml
-data/rules.yml
-data/stories.yml
+# data/nlu.yml
+# data/rules.yml
+# data/stories.yml
 
 /meta copy/
 
