@@ -1,4 +1,3 @@
-from .drink_constants import DrinkConstants
 from typing import Any, Text, Dict, List
 from rasa_sdk import Action, Tracker
 from rasa_sdk.executor import CollectingDispatcher
@@ -19,8 +18,6 @@ class OrderManager:
         self.additional_option = {}  # 음료별 추가 옵션을 저장하는 딕셔너리
         self.hot_drinks = ["허브티"]  # 항상 핫으로만 제공되는 음료 리스트
         self.ice_only_drinks = ["토마토주스", "키위주스", "망고스무디", "딸기스무디", "레몬에이드", "복숭아아이스티"]  # 항상 아이스로만 제공되는 음료 리스트
-        self.can_add_shot = ["샷", "카라멜시럽"]
-        self.don_add_shot = ["휘핑크림"]
     
     # 커피 추가 메서드
     def add_order(self, drink_type, quantity, temperature=None, size=None, additional_options=None):
@@ -34,11 +31,6 @@ class OrderManager:
             self.temperatures[drink_type] = []
             self.sizes[drink_type] = []
             self.additional_option[drink_type] = []
-        if drink_type == "복숭아아이스티" and additional_options and "샷" in additional_options:
-            # "샷" 중복 제거
-            options_list = additional_options.split(", ") if isinstance(additional_options, str) else additional_options
-            options_list = list(dict.fromkeys(options_list))  # 중복 제거
-            additional_options = ", ".join(options_list) if options_list else None
             
 
         # 음료 타입에 대한 온도, 사이즈, 추가 옵션을 각각 quantity 수만큼 리스트에 추가
@@ -121,7 +113,6 @@ class OrderManager:
                 current_temp = self.temperatures[drink_type][i]  # 현재 항목의 온도 정보 가져오기
                 current_size = self.sizes[drink_type][i]  # 현재 항목의 사이즈 정보 가져오기
                 existing_options = self.additional_option[drink_type][i].split(", ") if self.additional_option[drink_type][i] else []  # 현재 항목의 옵션 목록 가져오기
-
                 logging.warning(f"현재 옵션: {existing_options}, 현재 온도: {current_temp}, 현재 사이즈: {current_size}")  # 현재 옵션, 온도, 사이즈 로그 기록
                 logging.warning(f"추가해야할 옵션: {add_additional_options_list}")  # 추가해야할 옵션 로그 기록
                 logging.warning(f"현재 옵션 self: {current_options_list}, 현재 옵션: {existing_options}")
@@ -138,9 +129,9 @@ class OrderManager:
                             logging.warning(f"수정 완료: {indices_to_modify}")
                             break
 
-            if len(indices_to_modify) < quantity:
-                self.add_order(drink_type,quantity,temperature,size,add_additional_options)
-                #raise ValueError(f"{drink_type}의 추가 옵션 수량이 충분하지 않습니다.")
+                if len(indices_to_modify) < quantity:
+                    self.add_order(drink_type,quantity,temperature,size,add_additional_options)
+                    #raise ValueError(f"{drink_type}의 추가 옵션 수량이 충분하지 않습니다.")
         else:
             self.add_order(drink_type,quantity,temperature,size,add_additional_options)
             #raise ValueError(f"{drink_type}은(는) 주문에 없습니다.")
@@ -209,6 +200,40 @@ class OrderManager:
         return self.sizes
 
     # 주문 확인 후 출력 메서드
+    # def get_order_summary(self):
+    #     # 현재 주문 정보를 생성하여 반환하는 메서드
+    #     summary = []
+    #     # self.orders의 모든 음료 항목(음료 종류와 수량)에 대해 반복해 각 음료의 온도, 사이즈, 추가 옵션 정보를 가져옵니다.
+    #     for drink, quantity in self.orders.items():
+    #         temperatures = self.temperatures.get(drink, [None] * quantity)
+    #         sizes = self.sizes.get(drink, [None] * quantity)
+    #         options = self.additional_option.get(drink, [None] * quantity)
+
+    #         drink_summary = {}
+    #         for i in range(quantity):
+    #             temp = temperatures[i] if i < len(temperatures) else None
+    #             size = sizes[i] if i < len(sizes) else None
+    #             option = options[i] if i < len(options) else None
+    #             key = (temp, size, option)
+    #             if key in drink_summary:
+    #                 drink_summary[key] += 1
+    #             else:
+    #                 drink_summary[key] = 1
+
+    #         for (temp, size, option), count in drink_summary.items():
+    #             summary_item = f"{drink}"
+    #             if size:
+    #                 summary_item = f"{summary_item} {size} 사이즈"
+    #             if temp:
+    #                 summary_item = f"{temp} {summary_item}"
+    #             if option:
+    #                 # 여러 옵션을 "추가"라는 단어와 함께 출력
+    #                 options_list = option.split(", ")
+    #                 options_str = "".join([f" {opt} 추가" for opt in options_list])
+    #                 summary_item = f"{summary_item}{options_str}"
+    #             summary_item = f"{summary_item} {number_to_korean(count)}잔"
+    #             summary.append(summary_item.strip())
+    #     return ", ".join(summary)
     def get_order_summary(self):
         # 현재 주문 정보를 생성하여 반환하는 메서드
         summary = []
@@ -232,15 +257,15 @@ class OrderManager:
             for (temp, size, option), count in drink_summary.items():
                 summary_item = f"{drink}"
                 if size:
-                    summary_item = f"{summary_item} {size}"
+                    summary_item = f"{summary_item} {size} 사이즈"
                 if temp:
                     summary_item = f"{temp} {summary_item}"
                 if option:
-                    # 여러 옵션을 "추가"라는 단어와 함께 출력
-                    options_list = option.split(", ")
-                    options_str = ", ".join(options_list) + " 추가"
+                    # 중복된 옵션을 제거하고 한 번만 표시
+                    options_list = list(set(option.split(", ")))
+                    options_str = " ".join([f"{opt} 추가" for opt in options_list])
                     summary_item = f"{summary_item} {options_str}"
-                summary_item = f"{summary_item} {number_to_korean(count)} 잔"
+                summary_item = f"{summary_item} {number_to_korean(count)}잔"
                 summary.append(summary_item.strip())
         return ", ".join(summary)
 
@@ -253,7 +278,7 @@ class OrderMapper:
         self.is_temperature_change = is_temperature_change  # 온도 변경 기능 실행 여부 플래그
         self.is_size_change = is_size_change  # 사이즈 변경 기능 실행 여부 플래그
         self.drinks = []
-        self.suffixes = ("사이즈로", "사이즈", "으로", "으", "걸로", "로", "는", "은", "해주세요", "해서", "해", "한거", "이랑", "도")
+        self.suffixes = ("사이즈로", "사이즈", "으로", "으", "걸로", "로", "는", "은", "해주세요", "해서", "해", "한거", "이랑", "도", "주시고", "주고")
         if self.check_multi_order():
             self.check_multiple_option()
         else:
@@ -264,7 +289,7 @@ class OrderMapper:
     def _initialize_order(self):
         return {
             "temperature": None,
-            "drink_type": None,
+            "drink_type": [],
             "size": None,
             "quantity": 1,
             "additional_options": [],
@@ -273,10 +298,10 @@ class OrderMapper:
     def check_multi_order(self):
         drink_count = self._count_drink_types()
         temperature_count = self._count_temperature_entities()
-        quantity_count = self._count_quantity_entities()
-        size_count = self._count_size_entities()
-        additional_options = self._count_additional_options_entities()
-        if drink_count <= temperature_count or drink_count <= quantity_count or drink_count <= size_count or drink_count <= additional_options:
+        # quantity_count = self._count_quantity_entities()
+        # size_count = self._count_size_entities()
+        # additional_options = self._count_additional_options_entities()
+        if drink_count < temperature_count:
             return True
         else:
             return False
@@ -293,9 +318,11 @@ class OrderMapper:
                         break
                 entity["value"] = value
 
+
     def check_multiple_option(self):
         current_order = self._initialize_order()
         
+        # 주문을 저장할 동적 딕셔너리 초기화
         order_Conf = {'order0': {
             'drink_type': [],
             'temperature': [],
@@ -304,6 +331,7 @@ class OrderMapper:
             'additional_options': []
         }}
         
+        # 통합 주문 정보를 저장할 딕셔너리
         order = {
             'drink_type': [],
             'temperature': [],
@@ -315,91 +343,28 @@ class OrderMapper:
         count = 0
         order_key = f'order{count}'
         drinks = []
-        last_drink_type = None  # 마지막으로 언급된 음료 저장
 
+        # 엔티티 처리
         for entity in self.entities:
             entity_type = entity['entity']
             value = entity['value']
             
+            # drink_type인 경우 특별 처리
             if entity_type == 'drink_type':
-                last_drink_type = value  # 음료 타입 저장
-                if value in ["아아", "아 아", "아", "아가"]:
-                    processed_value = "아메리카노"
-                    if not order_Conf[order_key]['drink_type']:
-                        order_Conf[order_key]['drink_type'].append(processed_value)
-                        order_Conf[order_key]['temperature'].append("아이스")
-                    else:
-                        count += 1
-                        order_key = f'order{count}'
-                        order_Conf[order_key] = {
-                            'drink_type': [processed_value],
-                            'temperature': ["아이스"],
-                            'size': [],
-                            'quantity': [],
-                            'additional_options': []
-                        }
-                elif value in ["뜨아", "뜨 아", "뜨아아", "또", "응아", "쁘허", "뚜아"]:
-                    processed_value = "아메리카노"
-                    if not order_Conf[order_key]['drink_type']:
-                        order_Conf[order_key]['drink_type'].append(processed_value)
-                        order_Conf[order_key]['temperature'].append("핫")
-                    else:
-                        count += 1
-                        order_key = f'order{count}'
-                        order_Conf[order_key] = {
-                            'drink_type': [processed_value],
-                            'temperature': ["핫"],
-                            'size': [],
-                            'quantity': [],
-                            'additional_options': []
-                        }    
-                elif value in ["아샷추"]:
-                    processed_value = "복숭아아이스티"
-                    if not order_Conf[order_key]['drink_type']:
-                        order_Conf[order_key]['drink_type'].append(processed_value)
-                        order_Conf[order_key]['temperature'].append("아이스")
-                    else:
-                        count += 1
-                        order_key = f'order{count}'
-                        order_Conf[order_key] = {
-                            'drink_type': [processed_value],
-                            'temperature': ["아이스"],
-                            'size': [],
-                            'quantity': [],
-                            'additional_options': ["샷"]
-                        }
-                else:
-                    if not order_Conf[order_key]['drink_type']:
-                        order_Conf[order_key]['drink_type'].append(value)
-                    else:
-                        count += 1
-                        order_key = f'order{count}'
-                        order_Conf[order_key] = {
-                            'drink_type': [value],
-                            'temperature': [],
-                            'size': [],
-                            'quantity': [],
-                            'additional_options': []
-                        }
-            elif entity_type == 'temperature':
-                # 온도 엔티티가 있지만 현재 주문에 음료가 없는 경우
-                if not order_Conf[order_key]['drink_type'] and last_drink_type:
-                    # 이전 음료를 사용하여 새 주문 생성
-                    order_Conf[order_key]['drink_type'].append(last_drink_type)
-                
-                if len(order_Conf[order_key][entity_type]) < 2:
-                    order_Conf[order_key][entity_type].append(value)
-                else:
+                if not order_Conf[order_key]['drink_type']:  # 비어있는 경우
+                    order_Conf[order_key]['drink_type'].append(value)
+                else:  # 이미 값이 있는 경우
                     count += 1
                     order_key = f'order{count}'
                     order_Conf[order_key] = {
-                        'drink_type': [last_drink_type] if last_drink_type else [],  # 이전 음료 사용
-                        'temperature': [value],
+                        'drink_type': [value],
+                        'temperature': [],
                         'size': [],
                         'quantity': [],
                         'additional_options': []
                     }
-            elif entity_type in ['size', 'quantity', 'additional_options']:
+            # 다른 엔티티 타입 처리
+            elif entity_type in ['temperature', 'size', 'quantity', 'additional_options']:
                 if len(order_Conf[order_key][entity_type]) < 2:
                     order_Conf[order_key][entity_type].append(value)
                 else:
@@ -407,7 +372,7 @@ class OrderMapper:
                     order_key = f'order{count}'
                     order_Conf[order_key] = {
                         'drink_type': [],
-                        'temperature': [],
+                        'temperature': [value] if entity_type == 'temperature' else [],
                         'size': [value] if entity_type == 'size' else [],
                         'quantity': [value] if entity_type == 'quantity' else [],
                         'additional_options': [value] if entity_type == 'additional_options' else []
@@ -419,7 +384,7 @@ class OrderMapper:
         for order_key, order_data in order_Conf.items():
             # 해당 주문에 drink_type이 있는 경우만 처리
             if order_data['drink_type']:
-                drink_type = order_data['drink_type'][0]
+                drink_type = order_data['drink_type'][0]  # 첫 번째 drink_type 사용
                 temp_count = len(order_data['temperature'])
                 
                 # temperature가 2개인 경우 drink_type 복제
@@ -439,6 +404,7 @@ class OrderMapper:
 
         logging.warning(f'최종 처리된 drinks: {drinks}')
         self._complete_order(drinks)
+    
     # 음료와 온도, 잔 수, 사이즈, 추가옵션 매핑 메서드
     def _map_entities(self):
         self.clean_entity_values()
@@ -496,8 +462,15 @@ class OrderMapper:
                 elif drink_value in ["뜨아", "뜨 아", "뜨아아", "또", "응아", "쁘허", "뚜아"]:
                     current_order['temperature'] = "핫"
                     current_order['drink_type'] = "아메리카노"
-                elif entity['value'] in ["마키아또","마끼야도","마키야또","마끼아도","마키아도","마키야도","마까아또","마끼아또"]:
-                    current_order['drink_type'] = "카라멜마끼아또"
+                elif entity['value'] in "아바라":
+                    current_order['temperature'] = "아이스"
+                    current_order['drink_type'] = "바닐라라떼"
+                elif entity['value'] in "뜨라":
+                    current_order['temperature'] = "핫"
+                    current_order['drink_type'] = "카페라떼"
+                elif entity['value'] in "아라":
+                    current_order['temperature'] = "아이스"
+                    current_order['drink_type'] = "카페라떼"
                 else:
                     current_order['drink_type'] = standardize_drink_name(drink_value)
                     
@@ -527,8 +500,7 @@ class OrderMapper:
                 current_order['size'] = standardize_size(entity['value'])
 
             elif entity['entity'] == 'additional_options':
-                if entity['value'] != '아샷추':
-                    current_order['additional_options'].append(standardize_drink_name(standardize_option(entity['value'])))
+                current_order['additional_options'].append(standardize_drink_name(standardize_option(entity['value'])))
 
         if current_order['drink_type']:
             self._complete_order(current_order)
@@ -712,14 +684,6 @@ def number_to_korean(number: int) -> str:
 # 음료 종류 및 띄어쓰기 표준화 메서드
 def standardize_drink_name(name):
     # 음료 이름 변형을 표준 이름으로 매핑하는 사전
-    makkiato_variations = [
-        "마키아또", "마끼야도", "마키야또", "마끼아도", "마키아도", "마키야도", 
-        "마까아또", "마끼아또", "마끼", "마키", "카라멜마끼아또", "카라멜마키아또", 
-        "카라멜마끼야또", "카라멜마키야또", "카라멜마끼아도", "카라멜마키아도", 
-        "카라멜마까아또", "마키아또","마끼야도","마키야또","마끼아도","마키아도",
-        "마키야도","마까아또","마끼아또"
-    ]
-
     drink_name_map = {
         # 아메리카노 변형
         "아모리카노": "아메리카노",
@@ -732,14 +696,6 @@ def standardize_drink_name(name):
         "아메리카나": "아메리카노",
         "아메리카누": "아메리카노",
         "아모니카노": "아메리카노",
-        "아아": "아메리카노",
-        "아 아": "아메리카노",
-        "아": "아메리카노",
-        "뜨아": "아메리카노",
-        "뜨 아": "아메리카노",
-        "뜨아아": "아메리카노",
-        "또": "아메리카노",
-        "아가": "아메리카노",
 
         # 카페라떼 변형
         "카페랃떼": "카페라떼",
@@ -785,8 +741,6 @@ def standardize_drink_name(name):
         "카프티노": "카푸치노",
 
         # 마끼아또 변형
-        "카라멜마기아또": "카라멜마끼아또",  # 띄어쓰기 없는 버전 추가
-        "마키 아또": "카라멜마끼아또",      # 띄어쓰기 있는 버전 추가
         "카라멜마기아또": "카라멜마끼아또",
         "카라멜마끼야또": "카라멜마끼아또",
         "카라멜마키아또": "카라멜마끼아또",
@@ -801,9 +755,10 @@ def standardize_drink_name(name):
         "마끼아또": "카라멜마끼아또",
         "라벨마끼아또": "카라멜마끼아또",
         "카메라맡기어도": "카라멜마끼아또",
+        "카라멜마기야도": "카라멜마끼아또",
         
         # 말차라떼 변형
-        "말자 라떼": "말차라떼",     # 띄어쓰기 버전 추가
+        "말자라떼": "말차라떼",     # 띄어쓰기 버전 추가
         "말자라떼": "말차라떼",
         "말차라태": "말차라떼",
         "말자라테": "말차라떼",
@@ -846,7 +801,7 @@ def standardize_drink_name(name):
         "밀크때": "밀크티",
 
         # 딸기스무디 변형
-        "딸기 스므디": "딸기스무디",   # 띄어쓰기 버전 추가
+        "딸기스므디": "딸기스무디",   # 띄어쓰기 버전 추가
         "달기스무디": "딸기스무디",
         "따기스무디": "딸기스무디",
         "딸기스므디": "딸기스무디",
@@ -936,24 +891,35 @@ def standardize_drink_name(name):
         "토마토소스": "토마토주스",
 
         # 띄어쓰기 있는 버전 추가
-        "토마토 쥬스": "토마토주스",
-        "토마토 즈스": "토마토주스",
-        "토마토 쥬쓰": "토마토주스",
-        "토마도 쥬스": "토마토주스",
-        "토마토 주쓰": "토마토주스",
-        "토마도 쮜스": "토마토주스",
-        "토마토 쮜스": "토마토주스",
-        "토마토 쭈스": "토마토주스",
-        "토마토 소스": "토마토주스",
+        "토마토쥬스": "토마토주스",
+        "토마토즈스": "토마토주스",
+        "토마토쥬쓰": "토마토주스",
+        "토마도쥬스": "토마토주스",
+        "토마토주쓰": "토마토주스",
+        "토마도쮜스": "토마토주스",
+        "토마토쮜스": "토마토주스",
+        "토마토쭈스": "토마토주스",
+        "토마토소스": "토마토주스",
 
         # 기타 음료 변형
         "아포가토": "아포카토",
         "아보카도": "아포카토",
         "아프리카": "아포카토",
-        "복숭아 ost": "복숭아아이스티",
-        "복숭아 st": "복숭아아이스티",
-        "복숭아 에스티": "복숭아아이스티",
-        "복숭아 하이스틸": "복숭아아이스티",
+        "초콜릿": "초콜릿라떼",
+        "초콜릿대": "초콜릿라떼",
+        "바닐라떼": "바닐라라떼",
+        "바닐라레떼": "바닐라라떼",
+        
+        #카페 모카
+        "카페북한": "카페모카",
+
+        #키위주스
+        "TV스투스": "키위주스",
+        "TV쥬스": "키위주스",
+        "tv스투스": "키위주스",
+        "tv쥬스": "키위주스",
+
+        #복숭아 아이스티 
         "복숭아ost": "복숭아아이스티",
         "복숭아st": "복숭아아이스티",
         "복숭아St": "복숭아아이스티",
@@ -961,39 +927,48 @@ def standardize_drink_name(name):
         "복숭아에스티": "복숭아아이스티",
         "복숭아하이스틸": "복숭아아이스티",
         "복숭아아이스크림": "복숭아아이스티",
-        "초콜릿": "초콜릿라떼",
-        "초콜릿대": "초콜릿라떼",
-        "바닐라떼": "바닐라라떼",
-        "바닐라레떼": "바닐라라떼",
-        "카페북한": "카페모카",
-        "TV 스투스": "키위주스",
-        "TV 쥬스": "키위주스",
-        "tv 스투스": "키위주스",
-        "tv 쥬스": "키위주스",
+
+        "복수아티": "복숭아티",
+        "복숭하티": "복숭아티",
+        "북숭아티": "복숭아티",
+        "복숭앗티": "복숭아티",
+        "복성아티": "복숭아티",
+        "북성아티": "복숭아티",
+        "복숭화티": "복숭아티",
+        "복숭어티": "복숭아티",
+        "복슝아티": "복숭아티",
+        "복송아티": "복숭아티",
+        "복숑아티": "복숭아티",
+        "복숭이티": "복숭아티",
         
         # 바닐라라떼 관련 추가
-        "바닐라 떼": "바닐라라떼",
-        "바닐라 레떼": "바닐라라떼",
+        "바닐라떼": "바닐라라떼",
+        "바닐라레떼": "바닐라라떼",
         
         # 새롭게 추가될 변형들
         "아메": "아메리카노",    # 두 글자 메뉴
-        "뜨라": "카페라떼",     # 뜨거운 라떼
-        "아라": "카페라떼",     # 아이스 라떼
+        "아라": "카페라떼",     # 아이스 라떼 -> 커스텀으로 
         "에스": "에스프레소",    # 두 글자 메뉴
         "카푸": "카푸치노",     # 두 글자 메뉴
         "모카": "카페모카",     # 두 글자 메뉴
         "카라": "카라멜마끼아또",  # 두 글자 메뉴
         "바라": "바닐라라떼",    # 두 글자 메뉴
-        "아샷": "아메리카노",    # 아메리카노 샷 추가
-        "아샷추": "아메리카노",   # 아메리카노 샷 추가
-        "아삿추": "아메리카노",   # 아메리카노 샷 추가
         "초라": "초콜릿라떼",    # 두 글자 메뉴
-        "뚜아": "아메리카노",    # 뜨아 변형
-        "응아": "아메리카노",    # 아메리카노 변형
-        "쁘허": "허브티"        # 허브티 변형
+        
+        "아삿추": "아샷추",
+        "아샤추": "아샷추",
+        "아삭추": "아샷추",
+        "아솟추": "아샷추",
+        "아삳추": "아삿츄",
+        "아샷츄": "아샷추",
+        "아삿슈": "아샷추",
+        "아삿수": "아샷추",
+        "아샷슈": "아샷추",
+        "아샷수": "아샷추",
+        "아시아추": "아샷추",
+        "아시아츄": "아샷추",
+        "아사이추": "아샷추"
     }
-    
-    return drink_name_map.get(name, name) 
 
     # 공백과 쉼표 제거
     # re.sub는 (패턴, 교체할 값, 검색할 대상 문자열, 교체할 최대횟수(선택), 동작 수정 플래그(선택)) 으로 동작한다.
@@ -1080,7 +1055,7 @@ def standardize_size(value):
 
 # 추가옵션를 표준화하는 메서드
 def standardize_option(value):
-    if value in ["샤츠", "셔츠", "사추", "샤타나", "4추가", "삿", "샷트", "삿추", 
+    if value in ["샤츠", "셔츠", "사추", "샤타나", "4추", "삿", "샷트", "삿추", 
                  "솟트", "샤트추가", "샤추가", "싯", "솟추", "삿으", "샷으", 
                  "사아트", "소옷", "삿트"]:
         return "샷"
@@ -1114,7 +1089,63 @@ def raise_missing_attribute_error(drinks):
     if not drinks:
         raise ValueError("정확한 음료의 종류를 말씀하여주세요.")
 
-# 주문
+# 기존 주문 로직 수정 금지[X]
+# class ActionOrderConfirmation(Action):
+#     def name(self) -> Text:
+#         return "action_order_confirmation"
+
+#     #학습 된데이터를 받는곳으로 추정.
+#     async def run(
+#         self,
+#         dispatcher: CollectingDispatcher,
+#         tracker: Tracker,
+#         domain: Dict[Text, Any]
+#     ) -> List[Dict[Text, Any]]:
+#         try:
+#             # # 현재 주문 정보 초기화(주문을 하는데 이전 주문 정보가 남아있으면 안됨)
+#             # order_manager.clear_order()
+#             # 최근 사용자 메시지에서 엔터티를 가져오기
+#             entities = [entity for entity in tracker.latest_message.get("entities", []) if entity.get("extractor") != "DIETClassifier"]
+#             user_text = tracker.latest_message.get("text", "")
+            
+#             if "사이즈 업" in user_text:
+#                 raise KeyError("size up")
+#             # 엔티티를 위치 순서로 정렬
+#             mapper = OrderMapper(entities)
+            
+#             # 주문 결과를 저장할 딕셔너리
+#             temperatures, drink_types, sizes, quantities, additional_options = mapper.get_mapped_data()
+
+            
+#             #(수정 변수)
+#             logging.warning(f"주문 엔티티: {entities}")
+#             logging.warning(f"온도, 커피, 사이즈, 잔 수, 옵션: {temperatures} {drink_types} {sizes} {quantities} {additional_options}")
+            
+#             # 고정된 온도 음료의 온도 확인
+#             hot_drinks = ["허브티"]
+#             ice_only_drinks = ["토마토주스", "키위주스", "망고스무디", "딸기스무디", "레몬에이드", "복숭아아이스티"]
+#             for i in range(len(drink_types)):
+#                 if drink_types[i] in hot_drinks and temperatures[i] != "핫":
+#                     raise ValueError(f"{drink_types[i]}는(은) 온도를 변경하실 수 없습니다.")
+#                 if drink_types[i] in ice_only_drinks and temperatures[i] != "아이스":
+#                     raise ValueError(f"{drink_types[i]}는(은) 온도를 변경하실 수 없습니다.")
+            
+#             raise_missing_attribute_error(mapper.drinks)  # 음료 속성 검증
+            
+#             if drink_types and quantities:
+#                      for i in range(len(drink_types)):
+#                         order_manager.add_order(drink_types[i], quantities[i], temperatures[i], sizes[i], additional_options[i])
+                       
+#             # 메세지 생성
+#             confirmation_message = f"주문하신 음료는 {order_manager.get_order_summary()}입니다. 다른 추가 옵션이 필요하신가요?"
+#             # 출력
+#             dispatcher.utter_message(text=confirmation_message)
+
+#         except ValueError as e:
+#             dispatcher.utter_message(text=str(e))
+#         except Exception as e:
+#                 dispatcher.utter_message(text=f"주문 접수 중 오류가 발생했습니다: {str(e)}")
+#         return []
 class ActionOrderConfirmation(Action):
     def name(self) -> Text:
         return "action_order_confirmation"
@@ -1135,13 +1166,13 @@ class ActionOrderConfirmation(Action):
             
             if "사이즈 업" in user_text:
                 raise KeyError("size up")
+                
             # 엔티티를 위치 순서로 정렬
             mapper = OrderMapper(entities)
             
             # 주문 결과를 저장할 딕셔너리
             temperatures, drink_types, sizes, quantities, additional_options = mapper.get_mapped_data()
 
-            
             #(수정 변수)
             logging.warning(f"주문 엔티티: {entities}")
             logging.warning(f"온도, 커피, 사이즈, 잔 수, 옵션: {temperatures} {drink_types} {sizes} {quantities} {additional_options}")
@@ -1149,24 +1180,32 @@ class ActionOrderConfirmation(Action):
             # 고정된 온도 음료의 온도 확인
             hot_drinks = ["허브티"]
             ice_only_drinks = ["토마토주스", "키위주스", "망고스무디", "딸기스무디", "레몬에이드", "복숭아아이스티"]
+            
+            # 온도 제한 확인
             for i in range(len(drink_types)):
                 if drink_types[i] in hot_drinks and temperatures[i] != "핫":
                     raise ValueError(f"{drink_types[i]}는(은) 온도를 변경하실 수 없습니다.")
                 if drink_types[i] in ice_only_drinks and temperatures[i] != "아이스":
                     raise ValueError(f"{drink_types[i]}는(은) 온도를 변경하실 수 없습니다.")
-            # for i in range(len(drink_types)):
-            #     if drink_types[i] in DrinkConstants.HOT_DRINKS and temperatures[i] != "핫":
-            #         raise ValueError(f"{drink_types[i]}는(은) 온도를 변경하실 수 없습니다.")
-            #     if drink_types[i] in DrinkConstants.ICE_ONLY_DRINKS and temperatures[i] != "아이스":
-            #         raise ValueError(f"{drink_types[i]}는(은) 온도를 변경하실 수 없습니다.")
             
             raise_missing_attribute_error(mapper.drinks)  # 음료 속성 검증
             
+            # 주문 처리 시 중복 옵션 제거
             if drink_types and quantities:
-                     for i in range(len(drink_types)):
-                        order_manager.add_order(drink_types[i], quantities[i], temperatures[i], sizes[i], additional_options[i])
-                       
-            # 메세지 생성
+                for i in range(len(drink_types)):
+                    # 추가 옵션이 있는 경우 중복 제거
+                    if additional_options[i]:
+                        options_list = list(set(additional_options[i].split(", ")))
+                        additional_options[i] = ", ".join(options_list)
+                    
+                    order_manager.add_order(
+                        drink_types[i], 
+                        quantities[i], 
+                        temperatures[i], 
+                        sizes[i], 
+                        additional_options[i]
+                    )
+            
             confirmation_message = f"주문하신 음료는 {order_manager.get_order_summary()}입니다. 다른 추가 옵션이 필요하신가요?"
             # 출력
             dispatcher.utter_message(text=confirmation_message)
@@ -1207,11 +1246,11 @@ class ActionModifyOrder(Action):
             logging.warning(f"사용자 주문 변경 입력 내용: {user_text}")
 
             raise_missing_attribute_error(mapper.drinks)  # 음료 속성 검증
-
+            keywords = ["대신","말고","은","는","를","빼고","을","아니고","아닌","아니라","뺴고","있는","빼주시고"]
             # '대신' 또는 '말고'를 사용하여 주문 변경 여부 확인
-            if "대신" in user_text or "말고" in user_text or "은" in user_text or "는" in user_text:
+            if any(keyword in user_text for keyword in keywords):
                 # '대신' 또는 '말고'를 기준으로 텍스트 분리
-                split_text = re.split("대신|말고|은|는", user_text)
+                split_text = re.split("대신|말고|은|있는|는|를|빼고|을|아니고|아닌|아니라|빼주시고|뺴고", user_text)
                 logging.warning(f"매칭 시도: {split_text}")
                 if len(split_text) == 2:
                     target_part = {"text": split_text[0].strip(), "start": 0, "end": len(split_text[0].strip())}
@@ -1309,153 +1348,79 @@ class ActionModifyOrder(Action):
             return []
 
 #주문 제거
-class ActionSubtractFromOrder(Action):
+class ActionSubtractFromOrders(Action):
 
     def name(self) -> Text:
         # 액션의 이름을 반환하는 메소드
         return "action_subtract_from_order"
-
     async def run(
         self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]
     ) -> List[Dict[Text, Any]]:
         try:
-            # 최근 사용자 메시지에서 DIETClassifier가 아닌 엔티티들을 가져옴
-            subtract_entities = [entity for entity in tracker.latest_message.get("entities", []) if entity.get("extractor") != "DIETClassifier"]
-            logging.warning(subtract_entities)
-            # OrderMapper를 사용하여 엔티티들을 매핑
+            # 현재 의도(intent)와 메시지 텍스트 확인
+            current_intent = tracker.latest_message.get('intent', {}).get('name')
+            user_message = tracker.latest_message.get('text', '').lower()
+            
+            # 디버깅을 위한 로그 추가
+            logging.warning(f"Current intent: {current_intent}")
+            logging.warning(f"User message: {user_message}")
+
+            # 제거 관련 키워드 정의
+            removal_keywords = ['취소', '빼', '제거', '삭제', '지워', '없애', '안 넣어']
+            
+            # 명시적인 제거 의도 확인
+            has_removal_keyword = any(keyword in user_message for keyword in removal_keywords)
+            
+
+            # 여기서부터는 실제 제거 로직
+            subtract_entities = [entity for entity in tracker.latest_message.get("entities", []) 
+                            if entity.get("extractor") != "DIETClassifier"]
+            
+            logging.warning(f"사용자 주문 제거 입력 내용: {subtract_entities}")
+            
             mapper = OrderMapper(subtract_entities)
-            manager = OrderManager()
             temperatures, drink_types, sizes, quantities, additional_options = mapper.get_mapped_data()
 
-            logging.warning(f"사용자 주문 제거 입력 내용: {subtract_entities}")
             logging.warning(f"사용자 주문 제거 매핑 데이터: {temperatures, drink_types, sizes, quantities, additional_options}")
 
-            raise_missing_attribute_error(mapper.drinks)  # 음료 속성 검증(아이스 들어간 음료 다 취소. 가 드링크 타입이 없는데 왜 에러가 안뜨지?)
-            
-            # 매핑된 데이터를 순회하면서 주문 제거
+            # 제거 로직 실행
             for i in range(len(drink_types)):
-                drink = drink_types[i]  # 음료 종류
-                quantity = quantities[i]  # 잔 수 여기에 if quantities[i] == "전부" : quantity = ordermanager.get_orders()
-                size = sizes[i] if i < len(sizes) else None  # 사이즈
-                temperature = temperatures[i] if i < len(temperatures) else None  # 온도
-                additional_option = additional_options[i] if i < len(additional_options) else None  # 추가 옵션
+                drink = drink_types[i]
+                quantity = quantities[i]
+                size = sizes[i] if i < len(sizes) else None
+                temperature = temperatures[i] if i < len(temperatures) else None
+                additional_option = additional_options[i] if i < len(additional_options) else None
                 
                 try:
-                    # 주문에 해당 음료가 있는지 확인하고 제거
                     if drink in order_manager.get_orders():
-                        logging.warning(f"{temperature, drink, size, quantity, additional_option}")
+                        logging.warning(f"Removing: {temperature, drink, size, quantity, additional_option}")
                         order_manager.subtract_order(drink, quantity, temperature, size, additional_option)
                     else:
                         raise ValueError(f"{drink}은(는) 등록되지 않은 커피입니다! 다시 주문해주세요.")
                 except ValueError as e:
                     dispatcher.utter_message(text=str(e))
 
-            # 남아있는 주문이 있는지 확인하고 사용자에게 메시지 전송
+            # 결과 메시지 생성
             if order_manager.get_orders():
                 confirmation_sub_message = ""
                 for i in range(len(drink_types)):
-                        drink = drink_types[i]  # 음료 종류
-                        quantity = quantities[i]  # 잔 수
-                        size = sizes[i] if i < len(sizes) else None  # 사이즈
-                        temperature = temperatures[i] if i < len(temperatures) else None  # 온도
-                        sub_message = f"{temperature} {drink} {size} {number_to_korean(quantity)}잔 "
-                        confirmation_sub_message += sub_message 
+                    drink = drink_types[i]
+                    quantity = quantities[i]
+                    size = sizes[i] if i < len(sizes) else None
+                    temperature = temperatures[i] if i < len(temperatures) else None
+                    sub_message = f"{temperature} {drink} {size} {number_to_korean(quantity)}잔 "
+                    confirmation_sub_message += sub_message 
                 confirmation_message = f"{confirmation_sub_message}이 제거되었습니다. 현재 주문은 {order_manager.get_order_summary()}입니다. 다른 추가 옵션이 필요하신가요?"
                 dispatcher.utter_message(text=confirmation_message)
             else:
                 dispatcher.utter_message(text="모든 음료가 주문에서 제거되었습니다.")
 
             return []
-        except ValueError as e:
-            dispatcher.utter_message(text=str(e))
+            
         except Exception as e:
-            # 오류 발생 시 사용자에게 오류 메시지 전송
+            logging.exception("Error in action_subtract_from_order")
             dispatcher.utter_message(text=f"주문 제거 중 오류가 발생했습니다: {str(e)}")
             return []
-#주문 제거
-# class ActionSubtractFromOrders(Action):
-
-#     def name(self) -> Text:
-#         # 액션의 이름을 반환하는 메소드
-#         return "action_subtract_from_order"
-#     async def run(
-#         self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]
-#     ) -> List[Dict[Text, Any]]:
-#         try:
-#             # 현재 의도(intent)와 메시지 텍스트 확인
-#             current_intent = tracker.latest_message.get('intent', {}).get('name')
-#             user_message = tracker.latest_message.get('text', '').lower()
-            
-#             # 디버깅을 위한 로그 추가
-#             logging.warning(f"Current intent: {current_intent}")
-#             logging.warning(f"User message: {user_message}")
-
-#             # 제거 관련 키워드 정의
-#             removal_keywords = ['취소', '빼', '제거', '삭제', '지워', '없애', '안 넣어']
-            
-#             # 명시적인 제거 의도 확인
-#             has_removal_keyword = any(keyword in user_message for keyword in removal_keywords)
-            
-#             # 주문 추가 관련 키워드
-#             order_keywords = ['주문', '주세요', '할게요', '드릴게요', '원해요', '씨켜주세요', '식혀주세요']
-#             has_order_keyword = any(keyword in user_message for keyword in order_keywords)
-
-#             # 주문 추가로 처리해야 하는 경우
-#             if has_order_keyword or not has_removal_keyword:
-#                 # 주문 추가 액션으로 리다이렉트
-#                 from rasa_sdk.events import FollowupAction
-#                 dispatcher.utter_message(text="주문을 추가하겠습니다.")
-#                 return [FollowupAction("action_order_confirmation")]
-
-#             # 여기서부터는 실제 제거 로직
-#             subtract_entities = [entity for entity in tracker.latest_message.get("entities", []) 
-#                             if entity.get("extractor") != "DIETClassifier"]
-            
-#             logging.warning(f"사용자 주문 제거 입력 내용: {subtract_entities}")
-            
-#             mapper = OrderMapper(subtract_entities)
-#             temperatures, drink_types, sizes, quantities, additional_options = mapper.get_mapped_data()
-
-#             logging.warning(f"사용자 주문 제거 매핑 데이터: {temperatures, drink_types, sizes, quantities, additional_options}")
-
-#             # 제거 로직 실행
-#             for i in range(len(drink_types)):
-#                 drink = drink_types[i]
-#                 quantity = quantities[i]
-#                 size = sizes[i] if i < len(sizes) else None
-#                 temperature = temperatures[i] if i < len(temperatures) else None
-#                 additional_option = additional_options[i] if i < len(additional_options) else None
-                
-#                 try:
-#                     if drink in order_manager.get_orders():
-#                         logging.warning(f"Removing: {temperature, drink, size, quantity, additional_option}")
-#                         order_manager.subtract_order(drink, quantity, temperature, size, additional_option)
-#                     else:
-#                         raise ValueError(f"{drink}은(는) 등록되지 않은 커피입니다! 다시 주문해주세요.")
-#                 except ValueError as e:
-#                     dispatcher.utter_message(text=str(e))
-
-#             # 결과 메시지 생성
-#             if order_manager.get_orders():
-#                 confirmation_sub_message = ""
-#                 for i in range(len(drink_types)):
-#                     drink = drink_types[i]
-#                     quantity = quantities[i]
-#                     size = sizes[i] if i < len(sizes) else None
-#                     temperature = temperatures[i] if i < len(temperatures) else None
-#                     sub_message = f"{temperature} {drink} {size} {number_to_korean(quantity)}잔 "
-#                     confirmation_sub_message += sub_message 
-#                 confirmation_message = f"{confirmation_sub_message}이 제거되었습니다. 현재 주문은 {order_manager.get_order_summary()}입니다. 다른 추가 옵션이 필요하신가요?"
-#                 dispatcher.utter_message(text=confirmation_message)
-#             else:
-#                 dispatcher.utter_message(text="모든 음료가 주문에서 제거되었습니다.")
-
-#             return []
-            
-#         except Exception as e:
-#             logging.exception("Error in action_subtract_from_order")
-#             dispatcher.utter_message(text=f"주문 제거 중 오류가 발생했습니다: {str(e)}")
-#             return []
 
 # 주문 다중처리
 class ActionAddSubtract(Action):
@@ -1562,7 +1527,7 @@ class ActionAddSubtract(Action):
 
     # 온도 기본값 성정 메서드
     def _set_default_temperature(self, orders):
-        hot_drinks = ["허브티"]
+        hot_drinks = ["허브티","복숭아티"]
         ice_only_drinks = ["토마토주스", "키위주스", "망고스무디", "딸기스무디", "레몬에이드", "복숭아아이스티"]
 
         for order in orders:
@@ -1839,135 +1804,9 @@ class ActionSelectCoffeeTemperature(Action):
             return []
 
 # 커피 추가옵션 추가
-# class ActionAddAdditionalOption(Action):
-#     def name(self) -> Text:
-#         return "action_add_additional_option"
-    
-#     async def run(
-#         self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]
-#     ) -> List[Dict[Text, Any]]:
-#         try:
-#             # 최신 사용자 메시지에서 DIETClassifier가 아닌 엔티티를 가져오기
-#             # logging.warning(order_manager.get_orders())
-#             entities = [entity for entity in tracker.latest_message.get("entities", []) if entity.get("extractor") != "DIETClassifier"]
-#             mapper = OrderMapper(entities)
-#             temperatures, drink_types, sizes, quantities, additional_options = mapper.get_mapped_data()
-           
-#             add_indices = [i for i, entity in enumerate(entities) if entity['entity'] == 'add']
 
-                                            
-#                     # OrderMapper를 사용하여 엔티티를 매핑
-#             mapper = OrderMapper(entities)
-#             temperatures, drink_types, sizes, quantities, add_additional_options = mapper.get_mapped_data()
-                                        
-#             if add_indices:
-#                      # 'add' 엔티티가 하나만 있는 경우 모든 옵션을 추가
 
-#                         if len(add_indices) == 1:
-#                             logging.warning(f"add 엔티티 하나 있음")
-                                                                
-#                                                                 # 디버깅을 위한 로그 출력
-#                             logging.warning(f"추가 옵션 추가 입력 내용: {entities}")
-#                             logging.warning(f"추가 옵션 추가 매핑 데이터: {temperatures, drink_types, sizes, quantities, add_additional_options}")     
-
-#                                                                         # 음료 속성 검증
-#                             raise_missing_attribute_error(mapper.drinks)  
-
-#                             # 매핑된 데이터를 사용하여 주문 정보 업데이트
-#                             for i in range(len(drink_types)):
-#                                 drink = drink_types[i]  # 음료 종류
-#                                 quantity = quantities[i] if quantities[i] is not None else 1  # 잔 수
-#                                 temperature = temperatures[i] if i < len(temperatures) else "핫"  # 온도
-#                                 size = sizes[i] if i < len(sizes) else "미디움"  # 사이즈
-#                                 add_additional_options = add_additional_options[i] if i < len(add_additional_options) else []  # 추가 옵션
-
-#                                 current_option = []
-
-#                                 # 디버깅을 위한 로그 출력
-#                                 logging.warning(f"현재 옵션: {current_option}")
-#                                 logging.warning(f"추가 옵션: {add_additional_options}")
-                                
-#                                 if add_additional_options:
-#                                         # add_additional_options 메서드를 호출하여 추가 옵션 추가
-#                                     order_manager.add_additional_options(drink, quantity, temperature, size, current_option, add_additional_options)
-#                                 else: 
-#                                     # 추가라는 것을 받아들였을때 샷이 없을 경우에도 주문으로 처리 되도록
-#                                     order_manager.add_order(drink, quantity, temperature, size, add_additional_options)
-#                                     # 최종 확인 메시지 생성 및 사용자에게 전달
-#                                 confirmation_message = f"말씀하신 옵션이 추가 되었습니다. 주문하신 음료는 {order_manager.get_order_summary()}입니다. 다른 추가 옵션이 필요하신가요?"
-#                                 dispatcher.utter_message(text=confirmation_message)
-#                                 return []
-#                                 # 'add' 엔티티가 2개 이상인 경우
-#                         elif len(add_indices) > 1:
-#                             logging.warning(f"add 엔티티 여러개 있음")
-#                             # 마지막 'add' 엔티티의 인덱스
-#                             last_add_index = add_indices[-1]
-
-#                             # 마지막 'add' 엔티티 이전의 엔티티를 매핑
-#                             before_last_add_entities = entities[:last_add_index]
-#                             # 마지막 'add' 엔티티 이후의 엔티티 중 'additional_options' 엔티티만 추출
-#                             between_add_entities = entities[add_indices[-2] + 1:last_add_index]
-                                                                        
-#                             logging.warning(f"마지막 add 엔티티 이전 : {before_last_add_entities}")
-#                             logging.warning(f"마지막 add 엔티티 사이의 엔티티 : {between_add_entities}")
-
-#                             # 마지막 'add' 엔티티 이전의 엔티티를 매핑
-#                             current_mapper = OrderMapper(before_last_add_entities)
-#                             current_temperatures, current_drink_types, current_sizes, current_quantities, current_additional_options = current_mapper.get_mapped_data()
-
-#                             # 'additional_options' 엔티티만 추출
-#                             add_additional_options = [entity['value'] for entity in between_add_entities if entity['entity'] == 'additional_options']
-
-#                             # 현재 옵션에서 추가 옵션을 제거
-#                             # current_additional_options가 문자열이라면 split하여 리스트로 변환
-#                             current_additional_options_list = []
-#                             for option in current_additional_options:
-#                                 current_additional_options_list.extend(option.split(', '))
-
-#                             # 추가 옵션에서 중복 제거된 항목만 남기기
-#                                 current_additional_options = [
-#                                 option for option in current_additional_options_list
-#                                 if option not in add_additional_options
-#                                 ]
-
-#                                 # 추가 옵션 표준화
-#                                 add_additional_options = [standardize_option(option) for option in add_additional_options]
-
-#                                 # 디버깅을 위한 로그 출력
-#                                 logging.warning(f"현재 옵션: {current_additional_options}")
-#                                 logging.warning(f"추가 옵션: {add_additional_options}")
-
-#                                 # 현재 옵션과 추가 옵션을 비교하여 업데이트
-#                                 for i in range(len(current_drink_types)):
-#                                     drink = current_drink_types[i]  # 음료 종류
-#                                     quantity = current_quantities[i] if current_quantities[i] is not None else 1  # 잔 수
-#                                     temperature = current_temperatures[i] if i < len(current_temperatures) else "핫"  # 온도
-#                                     size = current_sizes[i] if i < len(current_sizes) else "미디움"  # 사이즈
-#                                     current_option = current_additional_options[i] if i < len(current_additional_options) else []  # 현재 추가 옵션
-
-#                                     logging.warning(f"업뎃: {drink, quantity, temperature, size, current_option}")
-
-#                                     if current_option:
-#                                         # 추가 옵션으로 업데이트
-#                                         order_manager.add_additional_options(drink, quantity, temperature, size, current_option, add_additional_options)
-
-#                                     # 최종 확인 메시지 생성 및 사용자에게 전달
-#                                         confirmation_message = f"말씀하신 옵션이 추가 되었습니다. 주문하신 음료는 {order_manager.get_order_summary()}입니다. 다른 추가 옵션이 필요하신가요?"
-#                                         dispatcher.utter_message(text=confirmation_message)
-
-#                                         return []
-#                                     else:
-#                                         order_manager.add_order(drink_types, quantities, temperatures, sizes, add_additional_options)
-
-#             return []
-#         except Exception as e:
-#             # 예외 발생 시 사용자에게 메시지 전달
-#             dispatcher.utter_message(text="추가 옵션 추가 중 문제가 발생했습니다. 다시 시도해 주세요.")
-#             # 예외 상세 로그 출력
-#             logging.exception("Exception occurred in action_add_additional_option")
-#             return []
-# 커피 추가옵션 추가
-class ActionAddAdditionalOption(Action):
+class  AdditionalOption(Action):
     def name(self) -> Text:
         return "action_add_additional_option"
     
@@ -2003,9 +1842,9 @@ class ActionAddAdditionalOption(Action):
                 if add_additional_options:
                     # add_additional_options 메서드를 호출하여 추가 옵션 추가
                     order_manager.add_additional_options(drink, quantity, temperature, size, current_option, add_additional_options)
-                else: 
-                    # 추가라는 것을 받아들였을때 샷이 없을 경우에도 주문으로 처리 되도록
-                    order_manager.add_order(drink, quantity, temperature, size, add_additional_options)
+                # else: 
+                #     # 추가라는 것을 받아들였을때 샷이 없을 경우에도 주문으로 처리 되도록
+                #     order_manager.add_order(drink, quantity, temperature, size, add_additional_options)
 
             # 최종 확인 메시지 생성 및 사용자에게 전달
             confirmation_message = f"말씀하신 옵션이 추가 되었습니다. 주문하신 음료는 {order_manager.get_order_summary()}입니다. 다른 추가 옵션이 필요하신가요?"
@@ -2088,36 +1927,36 @@ class ActionTakeOut(Action):
     async def run(
         self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]
     ) -> List[Dict[Text, Any]]:
-        try:          
-            # 최신 사용자 메시지에서 DIETClassifier가 아닌 엔티티를 가져오기
-            entities = [entity for entity in tracker.latest_message.get("entities", []) if entity.get("extractor") != "DIETClassifier"]
-            
-            manager = OrderManager()
-            # 테이크 엔티티 확인
-            logging.warning(f"테이크아웃 엔티티: {entities}")
+        try:
+                # 최신 사용자 메시지에서 DIETClassifier가 아닌 엔티티를 가져오기
+                entities = [entity for entity in tracker.latest_message.get("entities", []) if entity.get("extractor") != "DIETClassifier"]
+                
+                manager = OrderManager()
+                # 테이크 엔티티 확인
+                logging.warning(f"테이크아웃 엔티티: {entities}")
 
-            # x 값을 기준으로 엔티티 정렬
-            sorted_entities = sorted(entities, key=lambda e: e.get("x", 0))
+                # x 값을 기준으로 엔티티 정렬
+                sorted_entities = sorted(entities, key=lambda e: e.get("x", 0))
 
-            # 'take' 엔티티 필터링
-            take_entities = [entity for entity in sorted_entities if entity.get("entity") == "take"]
+                # 'take' 엔티티 필터링
+                take_entities = [entity for entity in sorted_entities if entity.get("entity") == "take"]
 
-            if take_entities:
-                if len(take_entities) == 1:
-                    # 'take' 엔티티가 하나일 경우 그 값을 사용
-                    last_take_value = take_entities[0].get("value")
-                else:
-                    # 'take' 엔티티가 여러 개일 경우 가장 마지막의 값 사용
-                    last_take_value = take_entities[-1].get("value")
+                if take_entities:
+                    if len(take_entities) == 1:
+                        # 'take' 엔티티가 하나일 경우 그 값을 사용
+                        last_take_value = take_entities[0].get("value")
+                    else:
+                        # 'take' 엔티티가 여러 개일 경우 가장 마지막의 값 사용
+                        last_take_value = take_entities[-1].get("value")
 
-                # take 엔티티 표준화
-                takeout = standardize_take(last_take_value)
+                    # take 엔티티 표준화
+                    takeout = standardize_take(last_take_value)
 
-                # 최종 주문 메시지 생성
-                final_message = f"{takeout} 주문이 완료되었습니다. 결제는 하단의 카드리더기로 결제해 주시기 바랍니다. 감사합니다."
-            # 메시지 출력
-            dispatcher.utter_message(text=final_message)
-            return []
+                    # 최종 주문 메시지 생성
+                    final_message = f"{takeout} 주문이 완료되었습니다. 결제는 하단의 카드리더기로 결제해 주시기 바랍니다. 감사합니다."
+                # 메시지 출력
+                dispatcher.utter_message(text=final_message)
+                return []
         except Exception as e:
             # 오류 발생 시 예외 처리
             logging.exception("Exception occurred in action_order_finish")
